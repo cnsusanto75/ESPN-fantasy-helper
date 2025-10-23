@@ -1,5 +1,5 @@
 import ollama
-from league_info import get_league_info
+from league_info import initialize_league_info
 
 model = "gemma3"
 
@@ -21,7 +21,7 @@ def continue_conversation(messages, user_input):
     print("Assistant:", answer)
 
 def main():
-    get_league_info()
+    initialize_league_info()
     first_message()
     while True:
         user_input = input("You: ")

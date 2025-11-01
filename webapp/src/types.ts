@@ -1,7 +1,12 @@
-export interface Save {
+export interface LeagueConfig {
+  leagueId: number;
+  year: number;
+  s2: string;
+  swid: string;
+}
+
+export interface Save extends LeagueConfig {
   id: string;
-  title: string;
-  content: string;
   created: number;
   updated: number;
 }
@@ -9,20 +14,23 @@ export interface Save {
 export interface SaveStorage {
   loadSaves(): Save[];
   saveToPersistence(saves: Save[]): void;
-  createSave(title: string, content?: string): Save;
+  createSave(config: Omit<Save, 'id' | 'created' | 'updated'>): Save;
   updateSave(save: Save): void;
   deleteSave(id: string): void;
 }
 
 export interface UIElements {
-  saveList: HTMLDivElement;
-  newSaveBtn: HTMLButtonElement;
-  newSaveModal: HTMLDivElement;
-  newSaveTitle: HTMLInputElement;
-  createSaveBtn: HTMLButtonElement;
-  cancelSaveBtn: HTMLButtonElement;
-  saveTitle: HTMLInputElement;
-  saveContent: HTMLTextAreaElement;
-  saveButton: HTMLButtonElement;
-  deleteButton: HTMLButtonElement;
+  saveList: HTMLDivElement | null;
+  newSaveBtn: HTMLButtonElement | null;
+  newSaveModal: HTMLDivElement | null;
+  leagueIdInput: HTMLInputElement | null;
+  yearInput: HTMLInputElement | null;
+  s2Input: HTMLInputElement | null;
+  swidInput: HTMLInputElement | null;
+  createSaveBtn: HTMLButtonElement | null;
+  cancelSaveBtn: HTMLButtonElement | null;
+  saveTitle: HTMLInputElement | null;
+  saveContent: HTMLTextAreaElement | null;
+  saveButton: HTMLButtonElement | null;
+  deleteButton: HTMLButtonElement | null;
 }

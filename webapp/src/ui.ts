@@ -17,7 +17,10 @@ export class UIManager {
       saveList: document.getElementById('saveList') as HTMLDivElement,
       newSaveBtn: document.getElementById('newSave') as HTMLButtonElement,
       newSaveModal: document.getElementById('newSaveModal') as HTMLDivElement,
-      newSaveTitle: document.getElementById('newSaveTitle') as HTMLInputElement,
+      leagueIdInput: document.getElementById('leagueId') as HTMLInputElement,
+      yearInput: document.getElementById('year') as HTMLInputElement,
+      s2Input: document.getElementById('s2') as HTMLInputElement,
+      swidInput: document.getElementById('swid') as HTMLInputElement,
       createSaveBtn: document.getElementById('createSave') as HTMLButtonElement,
       cancelSaveBtn: document.getElementById('cancelSave') as HTMLButtonElement,
       saveTitle: document.getElementById('saveTitle') as HTMLInputElement,
@@ -34,44 +37,52 @@ export class UIManager {
       cancelSaveBtn,
       saveButton,
       deleteButton,
-      saveTitle,
-      newSaveTitle
+      saveTitle
     } = this.elements;
 
-    // New save
-    newSaveBtn.addEventListener('click', () => this.showNewSaveModal());
-    createSaveBtn.addEventListener('click', () => this.handleCreateSave());
-    cancelSaveBtn.addEventListener('click', () => this.hideNewSaveModal());
+    // Check if elements exist before adding listeners
+    if (newSaveBtn) {
+      newSaveBtn.addEventListener('click', () => this.showNewSaveModal());
+    }
+    if (createSaveBtn) {
+      createSaveBtn.addEventListener('click', () => this.handleCreateSave());
+    }
+    if (cancelSaveBtn) {
+      cancelSaveBtn.addEventListener('click', () => this.hideNewSaveModal());
+    }
     
     // Save changes
-    saveButton.addEventListener('click', () => this.handleSaveChanges());
-    saveTitle.addEventListener('change', () => this.handleSaveChanges());
+    if (saveButton) {
+      saveButton.addEventListener('click', () => this.handleSaveChanges());
+    }
+    if (saveTitle) {
+      saveTitle.addEventListener('change', () => this.handleSaveChanges());
+    }
     
     // Delete
-    deleteButton.addEventListener('click', () => this.handleDelete());
-
-    // Modal enter key
-    newSaveTitle.addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') this.handleCreateSave();
-      if (e.key === 'Escape') this.hideNewSaveModal();
-    });
+    if (deleteButton) {
+      deleteButton.addEventListener('click', () => this.handleDelete());
+    }
   }
 
   private showNewSaveModal(): void {
-    const { newSaveModal, newSaveTitle } = this.elements;
-    newSaveModal.classList.add('show');
-    newSaveTitle.value = '';
-    newSaveTitle.focus();
+    const { newSaveModal } = this.elements;
+    if (newSaveModal) {
+      newSaveModal.classList.add('show');
+    }
   }
 
   private hideNewSaveModal(): void {
-    const { newSaveModal, newSaveTitle } = this.elements;
-    newSaveModal.classList.remove('show');
-    newSaveTitle.value = '';
+    const { newSaveModal } = this.elements;
+    if (newSaveModal) {
+      newSaveModal.classList.remove('show');
+    }
   }
 
   private refreshSavesList(): void {
     const { saveList } = this.elements;
+    if (!saveList) return;
+
     const saves = this.storage.loadSaves();
     
     saveList.innerHTML = '';
@@ -80,7 +91,7 @@ export class UIManager {
       const emptyMessage = document.createElement('div');
       emptyMessage.className = 'save-item';
       emptyMessage.style.color = '#666';
-      emptyMessage.textContent = 'No saves yet';
+      emptyMessage.textContent = 'No league configurations yet';
       saveList.appendChild(emptyMessage);
       return;
     }
@@ -92,78 +103,202 @@ export class UIManager {
         item.classList.add('active');
       }
 
-      const title = document.createElement('span');
-      title.textContent = save.title;
-      item.appendChild(title);
+      const info = document.createElement('div');
+      info.className = 'save-info';
+      
+      const leagueInfo = document.createElement('div');
+      leagueInfo.className = 'league-info';
+      leagueInfo.textContent = `League ID: ${save.leagueId} (${save.year})`;
+      info.appendChild(leagueInfo);
 
       const date = document.createElement('small');
       date.style.color = '#666';
       date.style.fontSize = '0.8em';
-      date.textContent = new Date(save.updated).toLocaleDateString();
-      item.appendChild(date);
+      date.textContent = `Updated: ${new Date(save.updated).toLocaleDateString()}`;
+      info.appendChild(date);
 
+      item.appendChild(info);
       item.addEventListener('click', () => this.loadSave(save));
       saveList.appendChild(item);
     });
   }
 
-  private loadSave(save: Save): void {
-    const { saveTitle, saveContent, saveButton, deleteButton } = this.elements;
+  private async loadSave(save: Save): Promise<void> {
+    const { leagueIdInput, yearInput, s2Input, swidInput, saveButton, deleteButton } = this.elements;
     
     this.currentSave = save;
     
-    saveTitle.style.display = 'block';
-    saveContent.style.display = 'block';
-    saveButton.style.display = 'block';
-    deleteButton.style.display = 'block';
+    if (leagueIdInput) {
+      leagueIdInput.style.display = 'block';
+      leagueIdInput.value = save.leagueId.toString();
+    }
+    if (yearInput) {
+      yearInput.style.display = 'block';
+      yearInput.value = save.year.toString();
+    }
+    if (s2Input) {
+      s2Input.style.display = 'block';
+      s2Input.value = save.s2;
+    }
+    if (swidInput) {
+      swidInput.style.display = 'block';
+      swidInput.value = save.swid;
+    }
+    if (saveButton) {
+      saveButton.style.display = 'block';
+    }
+    if (deleteButton) {
+      deleteButton.style.display = 'block';
+    }
+    
+    try {
+      // Notify backend of active save
+      const response = await fetch('http://localhost:5000/set-active-save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          saveId: save.id,
+          leagueId: save.leagueId,
+          year: save.year,
+          s2: save.s2,
+          swid: save.swid
+        })
+      });
 
-    saveTitle.value = save.title;
-    saveContent.value = save.content;
+      if (!response.ok) {
+        console.error('Failed to update active save in backend');
+      }
+    } catch (error) {
+      console.error('Error updating active save in backend:', error);
+    }
     
     this.refreshSavesList();
   }
 
-  private handleCreateSave(): void {
-    const { newSaveTitle } = this.elements;
-    const title = newSaveTitle.value.trim();
-    if (!title) return;
+  private async handleCreateSave(): Promise<void> {
+    const { leagueIdInput, yearInput, s2Input, swidInput } = this.elements;
 
-    const save = this.storage.createSave(title);
-    this.hideNewSaveModal();
-    this.refreshSavesList();
-    this.loadSave(save);
+    if (!leagueIdInput || !yearInput || !s2Input || !swidInput) {
+      alert('Error: Form elements not found');
+      return;
+    }
+
+    const leagueIdValue = leagueIdInput.value.trim();
+    const yearValue = yearInput.value.trim();
+    const s2Value = s2Input.value.trim();
+    const swidValue = swidInput.value.trim();
+
+    if (!leagueIdValue || !yearValue || !s2Value || !swidValue) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    const leagueId = parseInt(leagueIdValue, 10);
+    const year = parseInt(yearValue, 10);
+
+    if (isNaN(leagueId) || isNaN(year)) {
+      alert('Please enter valid numbers for League ID and Year');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/validate-league', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          leagueId,
+          year,
+          s2: s2Value,
+          swid: swidValue
+        })
+      });
+
+      const data: { valid: boolean; error?: string } = await response.json();
+      
+      if (!data.valid) {
+        alert(data.error || 'Invalid league credentials. Please check and try again.');
+        return;
+      }
+
+      const save = this.storage.createSave({
+        leagueId,
+        year,
+        s2: s2Value,
+        swid: swidValue
+      });
+
+      this.refreshSavesList();
+      this.loadSave(save);
+      this.hideNewSaveModal();
+    } catch (error) {
+      console.error('Error validating league:', error);
+      alert('Error validating league credentials. Please try again.');
+    }
   }
 
   private handleSaveChanges(): void {
     if (!this.currentSave) return;
 
-    const { saveTitle, saveContent } = this.elements;
+    const { leagueIdInput, yearInput, s2Input, swidInput } = this.elements;
     
-    this.currentSave = {
+    if (!leagueIdInput || !yearInput || !s2Input || !swidInput) {
+      alert('Error: Form elements not found');
+      return;
+    }
+
+    const updatedSave: Save = {
       ...this.currentSave,
-      title: saveTitle.value,
-      content: saveContent.value,
+      leagueId: parseInt(leagueIdInput.value, 10),
+      year: parseInt(yearInput.value, 10),
+      s2: s2Input.value,
+      swid: swidInput.value,
       updated: Date.now()
     };
 
-    this.storage.updateSave(this.currentSave);
+    this.storage.updateSave(updatedSave);
+    this.currentSave = updatedSave;
     this.refreshSavesList();
   }
 
-  private handleDelete(): void {
+  private async handleDelete(): Promise<void> {
     if (!this.currentSave || !confirm('Delete this save?')) return;
 
     this.storage.deleteSave(this.currentSave.id);
     this.hideEditor();
+    
+    try {
+      // Clear the active save in the backend
+      await fetch('http://localhost:5000/set-active-save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          saveId: null,
+          leagueId: null,
+          year: null,
+          s2: null,
+          swid: null
+        })
+      });
+    } catch (error) {
+      console.error('Error clearing active save in backend:', error);
+    }
+    
     this.currentSave = null;
     this.refreshSavesList();
   }
 
   private hideEditor(): void {
     const { saveTitle, saveContent, saveButton, deleteButton } = this.elements;
-    saveTitle.style.display = 'none';
-    saveContent.style.display = 'none';
-    saveButton.style.display = 'none';
-    deleteButton.style.display = 'none';
+    
+    if (saveTitle) saveTitle.style.display = 'none';
+    if (saveContent) saveContent.style.display = 'none';
+    if (saveButton) saveButton.style.display = 'none';
+    if (deleteButton) deleteButton.style.display = 'none';
   }
 }

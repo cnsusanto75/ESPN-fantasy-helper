@@ -8,11 +8,15 @@ export class LocalStorageService implements SaveStorage {
   }
 
   private checkAvailability(): void {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      throw new Error('LocalStorage is not available in this environment');
+    }
+    
     try {
-      localStorage.setItem('test', 'test');
-      localStorage.removeItem('test');
+      window.localStorage.setItem('test', 'test');
+      window.localStorage.removeItem('test');
     } catch (e) {
-      throw new Error('LocalStorage is not available');
+      throw new Error('LocalStorage is not writable or quota exceeded');
     }
   }
 
@@ -34,11 +38,10 @@ export class LocalStorageService implements SaveStorage {
     }
   }
 
-  createSave(title: string, content: string = ''): Save {
+  createSave(config: Omit<Save, 'id' | 'created' | 'updated'>): Save {
     const save: Save = {
+      ...config,
       id: Date.now().toString(),
-      title: title.trim() || 'Untitled',
-      content,
       created: Date.now(),
       updated: Date.now()
     };

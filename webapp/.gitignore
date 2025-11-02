@@ -44,3 +44,15 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Local storage backups
+*.localStorage.json
+
+# Python virtual environment (in case it gets created in webapp directory)
+venv/
+.venv/
+__pycache__/
+
+# API credentials and sensitive data
+**/credentials.json
+**/league_info.json

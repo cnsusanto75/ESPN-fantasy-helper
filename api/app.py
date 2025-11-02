@@ -7,7 +7,7 @@ from typing import Optional
 
 # Add the algorithm directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from algorithm.league_info import initialize_league_info
+from algorithm.league_info import initialize_league_info, get_league_teams
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "http://localhost:3001"]}})
@@ -61,6 +61,28 @@ def get_active_save():
         'year': active_save.year
     })
 
+@app.route('/get-league-teams', methods=['POST'])
+def get_league_teams():
+    data = request.json
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    required_fields = ['leagueId', 'year', 's2', 'swid']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    try:
+        from algorithm.league_info import get_league_teams
+        teams = get_league_teams(
+            league_id=int(data['leagueId']),
+            year=int(data['year']),
+            s2=data['s2'],
+            swid=data['swid']
+        )
+        return jsonify({'teams': teams})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
 @app.route('/validate-league', methods=['POST'])
 def validate_league():
     data = request.json
@@ -84,6 +106,15 @@ def validate_league():
         return jsonify({'valid': False, 'error': 'Invalid league ID or year'}), 400
     except Exception as e:
         return jsonify({'valid': False, 'error': str(e)}), 400
+    
+def send_league_teams():
+    teams = get_league_teams(
+        active_save.league_id,
+        active_save.year,
+        active_save.s2,
+        active_save.swid
+    )
+    return jsonify({'teams': teams})
 
 if __name__ == '__main__':
     app.run(port=5000)

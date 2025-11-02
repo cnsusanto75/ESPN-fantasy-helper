@@ -1,4 +1,4 @@
-import type { Save, SaveStorage, UIElements } from './types';
+import type { Save, SaveStorage, UIElements, LeagueConfig } from './types';
 
 export class UIManager {
   private currentSave: Save | null = null;
@@ -177,6 +177,68 @@ export class UIManager {
     this.refreshSavesList();
   }
 
+  private async showTeamSelectModal(credentials: LeagueConfig): Promise<number | null> {
+    const teamSelectModal = document.getElementById('teamSelectModal') as HTMLDivElement;
+    const teamSelect = document.getElementById('teamSelect') as HTMLSelectElement;
+    const confirmBtn = document.getElementById('confirmTeamSelect') as HTMLButtonElement;
+    const cancelBtn = document.getElementById('cancelTeamSelect') as HTMLButtonElement;
+
+    try {
+      const response = await fetch('http://localhost:5000/get-league-teams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials)
+      });
+
+      const data = await response.json();
+      if ('error' in data) {
+        throw new Error(data.error);
+      }
+
+      // Clear and populate team select
+      teamSelect.innerHTML = '';
+      Object.entries(data.teams).forEach(([id, name]) => {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = name as string;
+        teamSelect.appendChild(option);
+      });
+
+      // Show modal
+      teamSelectModal.classList.add('show');
+
+      // Return promise that resolves when user makes selection
+      return new Promise((resolve) => {
+        const handleConfirm = () => {
+          const teamId = parseInt(teamSelect.value, 10);
+          cleanup();
+          resolve(teamId);
+        };
+
+        const handleCancel = () => {
+          cleanup();
+          resolve(null);
+        };
+
+        const cleanup = () => {
+          confirmBtn.removeEventListener('click', handleConfirm);
+          cancelBtn.removeEventListener('click', handleCancel);
+          teamSelectModal.classList.remove('show');
+        };
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+      });
+    } catch (error) {
+      console.error('Error getting teams:', error);
+      alert('Error loading teams. Please try again.');
+      teamSelectModal.classList.remove('show');
+      return null;
+    }
+  }
+
   private async handleCreateSave(): Promise<void> {
     const { leagueIdInput, yearInput, s2Input, swidInput } = this.elements;
 
@@ -203,18 +265,21 @@ export class UIManager {
       return;
     }
 
+    const credentials = {
+      leagueId,
+      year,
+      s2: s2Value,
+      swid: swidValue
+    };
+
     try {
+      // First validate the credentials
       const response = await fetch('http://localhost:5000/validate-league', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          leagueId,
-          year,
-          s2: s2Value,
-          swid: swidValue
-        })
+        body: JSON.stringify(credentials)
       });
 
       const data: { valid: boolean; error?: string } = await response.json();
@@ -224,15 +289,22 @@ export class UIManager {
         return;
       }
 
+      // Show team selection modal and wait for user to select their team
+      const teamId = await this.showTeamSelectModal(credentials);
+      
+      if (teamId === null) {
+        // User cancelled team selection
+        return;
+      }
+
+      // Create save with selected team ID
       const save = this.storage.createSave({
-        leagueId,
-        year,
-        s2: s2Value,
-        swid: swidValue
+        ...credentials,
+        teamId
       });
 
       this.refreshSavesList();
-      this.loadSave(save);
+      await this.loadSave(save);
       this.hideNewSaveModal();
     } catch (error) {
       console.error('Error validating league:', error);

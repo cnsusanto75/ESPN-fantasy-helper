@@ -148,10 +148,20 @@ button.delete:hover {
   font-size: 1rem;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   border-color: #007bff;
   outline: none;
   box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.form-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: white;
 }
 
 .btn-group {

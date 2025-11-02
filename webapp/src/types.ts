@@ -3,12 +3,14 @@ export interface LeagueConfig {
   year: number;
   s2: string;
   swid: string;
+  teamId?: number;  // Optional because it's set after initial validation
 }
 
 export interface Save extends LeagueConfig {
   id: string;
   created: number;
   updated: number;
+  teamId: number;  // Required once saved
 }
 
 export interface SaveStorage {

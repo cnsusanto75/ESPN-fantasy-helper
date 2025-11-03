@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "espn-fantasy-helper"
+version = "0.1.0"
+description = "An AI-powered helper for ESPN fantasy basketball leagues"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    { name = "Clement Susanto", email = "cnsusanto75@gmail.com" }
+]
+dependencies = [
+    "espn-api>=0.32.1",
+    "flask>=3.0.0",
+    "flask-cors>=4.0.0",
+    "ollama>=0.1.0",
+    "fastapi>=0.104.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+ignore_missing_imports = true
+
+[project.urls]
+"Homepage" = "https://github.com/cnsusanto75/ESPN-fantasy-helper"
+"Bug Tracker" = "https://github.com/cnsusanto75/ESPN-fantasy-helper/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["algorithm"]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+lint = ["black .", "isort .", "mypy ."]
+format = ["black .", "isort ."]

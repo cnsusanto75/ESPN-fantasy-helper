@@ -1,3 +1,9 @@
+export type Theme = 'light' | 'dark';
+
+export interface Settings {
+  theme: Theme;
+}
+
 export interface LeagueConfig {
   leagueId: number;
   year: number;
@@ -33,6 +39,10 @@ export interface UIElements {
   cancelSaveBtn: HTMLButtonElement | null;
   saveTitle: HTMLInputElement | null;
   saveContent: HTMLTextAreaElement | null;
-  saveButton: HTMLButtonElement | null;
-  deleteButton: HTMLButtonElement | null;
+  tabSettings: HTMLButtonElement | null;
+  settingsModal: HTMLDivElement | null;
+  closeSettingsBtn: HTMLButtonElement | null;
+  savesContainer: HTMLDivElement | null;
+  themeToggle: HTMLButtonElement | null;
+  collapseButton: HTMLButtonElement | null;
 }

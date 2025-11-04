@@ -1,15 +1,67 @@
-import type { Save, SaveStorage, UIElements, LeagueConfig } from './types';
+import type { Save, SaveStorage, UIElements, LeagueConfig, Settings } from './types';
 
 export class UIManager {
   private currentSave: Save | null = null;
   private elements: UIElements;
+  private settings: Settings = { theme: 'light' };
 
-  constructor(
-    private readonly storage: SaveStorage
-  ) {
+  private hideEditor(): void {
+    const { saveTitle, saveContent } = this.elements;
+    if (saveTitle) saveTitle.style.display = 'none';
+    if (saveContent) saveContent.style.display = 'none';
+  }
+
+  private toggleSidebar(): void {
+    const container = document.querySelector('.sidebar-container') as HTMLElement;
+    if (container) {
+      const isCollapsed = container.classList.toggle('collapsed');
+      
+      // Update collapse button icon
+      if (this.elements.collapseButton) {
+        this.elements.collapseButton.textContent = isCollapsed ? '›' : '‹';
+      }
+
+      // Update margins for content areas
+      const margin = isCollapsed ? '30px' : '250px';
+      const savesContent = document.querySelector('.saves-content') as HTMLElement;
+      
+      if (savesContent) {
+        savesContent.style.marginLeft = margin;
+      }
+
+      // Store collapse state
+      localStorage.setItem('sidebarCollapsed', isCollapsed.toString());
+    }
+  }
+
+  private loadSidebarState(): void {
+    const container = document.querySelector('.sidebar-container') as HTMLElement;
+    if (container && this.elements.collapseButton) {
+      const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+      if (isCollapsed) {
+        container.classList.add('collapsed');
+        this.elements.collapseButton.textContent = '›';
+        
+        // Update margins for content areas
+        const margin = '30px';
+        const savesContent = document.querySelector('.saves-content') as HTMLElement;
+        
+        if (savesContent) {
+          savesContent.style.marginLeft = margin;
+        }
+      } else {
+        this.elements.collapseButton.textContent = '‹';
+      }
+    }
+  }
+
+  constructor(private readonly storage: SaveStorage) {
     this.elements = this.getElements();
     this.setupListeners();
     this.refreshSavesList();
+    this.loadSettings();
+    this.applyTheme();
+    this.loadSidebarState();
   }
 
   private getElements(): UIElements {
@@ -25,8 +77,12 @@ export class UIManager {
       cancelSaveBtn: document.getElementById('cancelSave') as HTMLButtonElement,
       saveTitle: document.getElementById('saveTitle') as HTMLInputElement,
       saveContent: document.getElementById('saveContent') as HTMLTextAreaElement,
-      saveButton: document.getElementById('saveButton') as HTMLButtonElement,
-      deleteButton: document.getElementById('deleteButton') as HTMLButtonElement
+      tabSettings: document.getElementById('tabSettings') as HTMLButtonElement,
+      settingsModal: document.getElementById('settingsModal') as HTMLDivElement,
+      closeSettingsBtn: document.getElementById('closeSettings') as HTMLButtonElement,
+      savesContainer: document.getElementById('savesContainer') as HTMLDivElement,
+      themeToggle: document.getElementById('themeToggle') as HTMLButtonElement,
+      collapseButton: document.getElementById('collapseButton') as HTMLButtonElement
     };
   }
 
@@ -35,10 +91,16 @@ export class UIManager {
       newSaveBtn,
       createSaveBtn,
       cancelSaveBtn,
-      saveButton,
-      deleteButton,
-      saveTitle
+      saveTitle,
+      tabSettings,
+      themeToggle,
+      collapseButton
     } = this.elements;
+
+    // Set up sidebar collapse functionality
+    if (collapseButton) {
+      collapseButton.addEventListener('click', () => this.toggleSidebar());
+    }
 
     // Check if elements exist before adding listeners
     if (newSaveBtn) {
@@ -50,18 +112,20 @@ export class UIManager {
     if (cancelSaveBtn) {
       cancelSaveBtn.addEventListener('click', () => this.hideNewSaveModal());
     }
-    
-    // Save changes
-    if (saveButton) {
-      saveButton.addEventListener('click', () => this.handleSaveChanges());
+    if (tabSettings) {
+      tabSettings.addEventListener('click', () => this.showSettingsModal());
     }
+    
+    const { closeSettingsBtn } = this.elements;
+    if (closeSettingsBtn) {
+      closeSettingsBtn.addEventListener('click', () => this.hideSettingsModal());
+    }
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => this.toggleTheme());
+    }
+    
     if (saveTitle) {
       saveTitle.addEventListener('change', () => this.handleSaveChanges());
-    }
-    
-    // Delete
-    if (deleteButton) {
-      deleteButton.addEventListener('click', () => this.handleDelete());
     }
   }
 
@@ -76,6 +140,20 @@ export class UIManager {
     const { newSaveModal } = this.elements;
     if (newSaveModal) {
       newSaveModal.classList.remove('show');
+    }
+  }
+
+  private showSettingsModal(): void {
+    const { settingsModal } = this.elements;
+    if (settingsModal) {
+      settingsModal.classList.add('show');
+    }
+  }
+
+  private hideSettingsModal(): void {
+    const { settingsModal } = this.elements;
+    if (settingsModal) {
+      settingsModal.classList.remove('show');
     }
   }
 
@@ -105,6 +183,7 @@ export class UIManager {
 
       const info = document.createElement('div');
       info.className = 'save-info';
+      info.addEventListener('click', () => this.loadSave(save));
       
       const leagueInfo = document.createElement('div');
       leagueInfo.className = 'league-info';
@@ -117,14 +196,41 @@ export class UIManager {
       date.textContent = `Updated: ${new Date(save.updated).toLocaleDateString()}`;
       info.appendChild(date);
 
+      const menuContainer = document.createElement('div');
+      menuContainer.className = 'menu-container';
+
+      const menuButton = document.createElement('button');
+      menuButton.className = 'menu-button';
+      menuButton.innerHTML = '⋮';
+      menuButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleMenu(save.id);
+      });
+
+      const menuDropdown = document.createElement('div');
+      menuDropdown.className = 'menu-dropdown';
+      menuDropdown.id = `menu-${save.id}`;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'menu-item delete';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.handleDelete(save);
+      });
+
+      menuDropdown.appendChild(deleteBtn);
+      menuContainer.appendChild(menuButton);
+      menuContainer.appendChild(menuDropdown);
+
       item.appendChild(info);
-      item.addEventListener('click', () => this.loadSave(save));
+      item.appendChild(menuContainer);
       saveList.appendChild(item);
     });
   }
 
   private async loadSave(save: Save): Promise<void> {
-    const { leagueIdInput, yearInput, s2Input, swidInput, saveButton, deleteButton } = this.elements;
+    const { leagueIdInput, yearInput, s2Input, swidInput } = this.elements;
     
     this.currentSave = save;
     
@@ -143,12 +249,6 @@ export class UIManager {
     if (swidInput) {
       swidInput.style.display = 'block';
       swidInput.value = save.swid;
-    }
-    if (saveButton) {
-      saveButton.style.display = 'block';
-    }
-    if (deleteButton) {
-      deleteButton.style.display = 'block';
     }
     
     try {
@@ -336,41 +436,87 @@ export class UIManager {
     this.refreshSavesList();
   }
 
-  private async handleDelete(): Promise<void> {
-    if (!this.currentSave || !confirm('Delete this save?')) return;
+  private toggleMenu(saveId: string): void {
+    const allMenus = document.querySelectorAll('.menu-dropdown');
+    allMenus.forEach(menu => {
+      if (menu.id !== `menu-${saveId}`) {
+        menu.classList.remove('show');
+      }
+    });
 
-    this.storage.deleteSave(this.currentSave.id);
-    this.hideEditor();
-    
-    try {
-      // Clear the active save in the backend
-      await fetch('http://localhost:5000/set-active-save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          saveId: null,
-          leagueId: null,
-          year: null,
-          s2: null,
-          swid: null
-        })
-      });
-    } catch (error) {
-      console.error('Error clearing active save in backend:', error);
+    const menu = document.getElementById(`menu-${saveId}`);
+    if (menu) {
+      menu.classList.toggle('show');
+      
+      // Close menu when clicking outside
+      const handleClickOutside = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest('.menu-container')) {
+          menu.classList.remove('show');
+          document.removeEventListener('click', handleClickOutside);
+        }
+      };
+      
+      if (menu.classList.contains('show')) {
+        setTimeout(() => {
+          document.addEventListener('click', handleClickOutside);
+        }, 0);
+      }
     }
-    
-    this.currentSave = null;
+  }
+
+  private async handleDelete(save: Save): Promise<void> {
+    if (!confirm('Delete this league configuration?')) return;
+
+    this.storage.deleteSave(save.id);
+    if (this.currentSave?.id === save.id) {
+      this.hideEditor();
+      
+      try {
+        // Clear the active save in the backend
+        await fetch('http://localhost:5000/set-active-save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            saveId: null,
+            leagueId: null,
+            year: null,
+            s2: null,
+            swid: null
+          })
+        });
+      } catch (error) {
+        console.error('Error clearing active save in backend:', error);
+      }
+      
+      this.currentSave = null;
+    }
     this.refreshSavesList();
   }
 
-  private hideEditor(): void {
-    const { saveTitle, saveContent, saveButton, deleteButton } = this.elements;
-    
-    if (saveTitle) saveTitle.style.display = 'none';
-    if (saveContent) saveContent.style.display = 'none';
-    if (saveButton) saveButton.style.display = 'none';
-    if (deleteButton) deleteButton.style.display = 'none';
+  private loadSettings(): void {
+    const savedSettings = localStorage.getItem('espn-helper-settings');
+    if (savedSettings) {
+      this.settings = JSON.parse(savedSettings);
+      this.applyTheme();
+    }
   }
+
+  private saveSettings(): void {
+    localStorage.setItem('espn-helper-settings', JSON.stringify(this.settings));
+  }
+
+  private toggleTheme(): void {
+    this.settings.theme = this.settings.theme === 'light' ? 'dark' : 'light';
+    this.saveSettings();
+    this.applyTheme();
+  }
+
+  private applyTheme(): void {
+    document.body.classList.remove('theme-light', 'theme-dark');
+    document.body.classList.add(`theme-${this.settings.theme}`);
+  }
+
 }

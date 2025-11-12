@@ -48,5 +48,3 @@ def update_player_stats(league):
             print(f"Error updating free agent {player.name}: {e}")
     espn_db.commit()
     espn_db.close()
-
-update_player_stats(League(783667716, year=2026, espn_s2="AEBeJU6gxbT0JUb1kskzDwIdakZzEwMka/9QNop7SujUIrZYiD9U6WMahLbwB69unEuS7uShGWMgJbn3qPDWjHr1fQDpTAeIYBV+qsPNzxZlVZmPAs04GvKxCEdqLZJQn44YyJ3JS5zQpWVtCE7c79DzBwhAcpg+jRStKrThbNPkrTp3AQmVV5Zqpc5RNk+7JeyzMB6alSZlYmdDzXxD7OcVBLXMwAtHvekQ7RGq2cKw2Q8MbWWet/PTl3bWr/TX+q5XWGff00dOCyA42KAsA2SpYV8Ndvj1ZETNSjU5qAPftA==", swid="{3836ABEE-C9FF-4BA8-87B4-DAD5F7FAAB8E}"))

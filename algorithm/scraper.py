@@ -15,6 +15,7 @@ def create_player_stats_table(league):
     espn_db.close()
 
 def update_player_stats(league):
+    create_player_stats_table(league)
     # Fetch existing player names to avoid duplicates
     espn_db = sqlite3.connect(espn_db_path)
     espn_cursor = espn_db.cursor()
@@ -48,3 +49,19 @@ def update_player_stats(league):
             print(f"Error updating free agent {player.name}: {e}")
     espn_db.commit()
     espn_db.close()
+
+def get_required_cats(League):
+    data = League.espn_request.get_league()['settings']['scoringSettings']['scoringItems']
+    required_cats = []
+    for cat in data:
+        if cat['points'] != 0:
+            required_cats.append(cat['statId'])
+    all_cats = league.teams[0].roster[0].stats['2026_total']['avg'].keys()
+    cat_map = {}
+    for i, cat in enumerate(all_cats):
+        if i in required_cats:
+            cat_map[i] = cat
+    return cat_map
+
+league = League(league_id=783667716, year=2026, espn_s2="AEBeJU6gxbT0JUb1kskzDwIdakZzEwMka/9QNop7SujUIrZYiD9U6WMahLbwB69unEuS7uShGWMgJbn3qPDWjHr1fQDpTAeIYBV+qsPNzxZlVZmPAs04GvKxCEdqLZJQn44YyJ3JS5zQpWVtCE7c79DzBwhAcpg+jRStKrThbNPkrTp3AQmVV5Zqpc5RNk+7JeyzMB6alSZlYmdDzXxD7OcVBLXMwAtHvekQ7RGq2cKw2Q8MbWWet/PTl3bWr/TX+q5XWGff00dOCyA42KAsA2SpYV8Ndvj1ZETNSjU5qAPftA==", swid="{3836ABEE-C9FF-4BA8-87B4-DAD5F7FAAB8E}")
+update_player_stats(league)

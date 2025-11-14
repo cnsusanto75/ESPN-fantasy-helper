@@ -56,12 +56,9 @@ def get_required_cats(League):
     for cat in data:
         if cat['points'] != 0:
             required_cats.append(cat['statId'])
-    all_cats = league.teams[0].roster[0].stats['2026_total']['avg'].keys()
+    all_cats = League.teams[0].roster[0].stats['2026_total']['avg'].keys()
     cat_map = {}
     for i, cat in enumerate(all_cats):
         if i in required_cats:
             cat_map[i] = cat
     return cat_map
-
-league = League(league_id=783667716, year=2026, espn_s2="AEBeJU6gxbT0JUb1kskzDwIdakZzEwMka/9QNop7SujUIrZYiD9U6WMahLbwB69unEuS7uShGWMgJbn3qPDWjHr1fQDpTAeIYBV+qsPNzxZlVZmPAs04GvKxCEdqLZJQn44YyJ3JS5zQpWVtCE7c79DzBwhAcpg+jRStKrThbNPkrTp3AQmVV5Zqpc5RNk+7JeyzMB6alSZlYmdDzXxD7OcVBLXMwAtHvekQ7RGq2cKw2Q8MbWWet/PTl3bWr/TX+q5XWGff00dOCyA42KAsA2SpYV8Ndvj1ZETNSjU5qAPftA==", swid="{3836ABEE-C9FF-4BA8-87B4-DAD5F7FAAB8E}")
-update_player_stats(league)

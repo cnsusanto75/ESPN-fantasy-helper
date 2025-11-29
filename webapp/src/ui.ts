@@ -4,11 +4,13 @@ export class UIManager {
   private currentSave: Save | null = null;
   private elements: UIElements;
   private settings: Settings = { theme: 'light' };
+  private readonly API_URL = 'http://localhost:5000';
 
   private hideEditor(): void {
     const { saveTitle, saveContent } = this.elements;
     if (saveTitle) saveTitle.style.display = 'none';
     if (saveContent) saveContent.style.display = 'none';
+    this.resetLeagueData();
   }
 
   private toggleSidebar(): void {
@@ -24,9 +26,13 @@ export class UIManager {
       // Update margins for content areas
       const margin = isCollapsed ? '30px' : '250px';
       const savesContent = document.querySelector('.saves-content') as HTMLElement;
+      const contentArea = document.querySelector('.content') as HTMLElement;
       
       if (savesContent) {
         savesContent.style.marginLeft = margin;
+      }
+      if (contentArea) {
+        contentArea.style.marginLeft = margin;
       }
 
       // Store collapse state
@@ -45,12 +51,25 @@ export class UIManager {
         // Update margins for content areas
         const margin = '30px';
         const savesContent = document.querySelector('.saves-content') as HTMLElement;
+        const contentArea = document.querySelector('.content') as HTMLElement;
         
         if (savesContent) {
           savesContent.style.marginLeft = margin;
         }
+        if (contentArea) {
+          contentArea.style.marginLeft = margin;
+        }
       } else {
         this.elements.collapseButton.textContent = '‹';
+        const margin = '250px';
+        const savesContent = document.querySelector('.saves-content') as HTMLElement;
+        const contentArea = document.querySelector('.content') as HTMLElement;
+        if (savesContent) {
+          savesContent.style.marginLeft = margin;
+        }
+        if (contentArea) {
+          contentArea.style.marginLeft = margin;
+        }
       }
     }
   }
@@ -62,6 +81,7 @@ export class UIManager {
     this.loadSettings();
     this.applyTheme();
     this.loadSidebarState();
+    this.resetLeagueData();
   }
 
   private getElements(): UIElements {
@@ -82,7 +102,9 @@ export class UIManager {
       closeSettingsBtn: document.getElementById('closeSettings') as HTMLButtonElement,
       savesContainer: document.getElementById('savesContainer') as HTMLDivElement,
       themeToggle: document.getElementById('themeToggle') as HTMLButtonElement,
-      collapseButton: document.getElementById('collapseButton') as HTMLButtonElement
+      collapseButton: document.getElementById('collapseButton') as HTMLButtonElement,
+      teamRoster: document.getElementById('teamRoster') as HTMLDivElement,
+      topFreeAgents: document.getElementById('topFreeAgents') as HTMLDivElement
     };
   }
 
@@ -251,9 +273,11 @@ export class UIManager {
       swidInput.value = save.swid;
     }
     
+    let activeSaveSet = false;
+
     try {
       // Notify backend of active save
-      const response = await fetch('http://localhost:5000/set-active-save', {
+      const response = await fetch(`${this.API_URL}/set-active-save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -263,15 +287,25 @@ export class UIManager {
           leagueId: save.leagueId,
           year: save.year,
           s2: save.s2,
-          swid: save.swid
+          swid: save.swid,
+          teamId: save.teamId
         })
       });
 
-      if (!response.ok) {
-        console.error('Failed to update active save in backend');
+      const data: { success?: boolean; error?: string } = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update active save in backend');
       }
+
+      activeSaveSet = true;
     } catch (error) {
       console.error('Error updating active save in backend:', error);
+      this.resetLeagueData();
+    }
+
+    if (activeSaveSet) {
+      await this.refreshLeagueData();
     }
     
     this.refreshSavesList();
@@ -474,24 +508,19 @@ export class UIManager {
       
       try {
         // Clear the active save in the backend
-        await fetch('http://localhost:5000/set-active-save', {
+        await fetch(`${this.API_URL}/set-active-save`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            saveId: null,
-            leagueId: null,
-            year: null,
-            s2: null,
-            swid: null
-          })
+          body: JSON.stringify(null)
         });
       } catch (error) {
         console.error('Error clearing active save in backend:', error);
       }
       
       this.currentSave = null;
+      this.resetLeagueData();
     }
     this.refreshSavesList();
   }
@@ -517,6 +546,122 @@ export class UIManager {
   private applyTheme(): void {
     document.body.classList.remove('theme-light', 'theme-dark');
     document.body.classList.add(`theme-${this.settings.theme}`);
+  }
+
+  private resetLeagueData(): void {
+    if (this.elements.teamRoster) {
+      this.elements.teamRoster.textContent = 'Select a save to load your roster.';
+    }
+    this.renderFreeAgentsMessage('Select a save to load the best available players.');
+  }
+
+  private async refreshLeagueData(): Promise<void> {
+    if (!this.currentSave) {
+      this.resetLeagueData();
+      return;
+    }
+
+    await Promise.all([this.loadTeamRoster(), this.loadTopFreeAgents()]);
+  }
+
+  private renderFreeAgentsMessage(message: string): void {
+    const target = this.elements.topFreeAgents;
+    if (!target) return;
+    target.innerHTML = '';
+    const placeholder = document.createElement('div');
+    placeholder.className = 'free-agents-placeholder';
+    placeholder.textContent = message;
+    target.appendChild(placeholder);
+  }
+
+  private async loadTeamRoster(): Promise<void> {
+    const target = this.elements.teamRoster;
+    if (!target || !this.currentSave) return;
+
+    target.textContent = 'Loading roster...';
+
+    try {
+      const response = await fetch(`${this.API_URL}/get-team-roster`);
+      const data: { roster?: string[]; error?: string } = await response.json();
+
+      if (!response.ok || !Array.isArray(data.roster)) {
+        throw new Error(data.error || 'Invalid roster response');
+      }
+
+      if (!data.roster.length) {
+        target.textContent = 'No players found on your roster.';
+        return;
+      }
+
+      target.textContent = '';
+      const column = document.createElement('div');
+      column.className = 'roster-column';
+
+      const title = document.createElement('h4');
+      title.textContent = 'Active Roster';
+      column.appendChild(title);
+
+      const list = document.createElement('ul');
+      data.roster.forEach(player => {
+        const item = document.createElement('li');
+        item.textContent = player;
+        list.appendChild(item);
+      });
+
+      column.appendChild(list);
+      target.appendChild(column);
+    } catch (error) {
+      console.error('Error fetching team roster:', error);
+      target.textContent = 'Unable to load roster.';
+    }
+  }
+
+  private async loadTopFreeAgents(): Promise<void> {
+    const target = this.elements.topFreeAgents;
+    if (!target || !this.currentSave) return;
+
+    this.renderFreeAgentsMessage('Loading free agents...');
+
+    try {
+      const response = await fetch(`${this.API_URL}/get-top-free-agents`);
+      const data: { top_free_agents?: Record<string, string[]>; error?: string } = await response.json();
+
+      if (!response.ok || !data.top_free_agents) {
+        throw new Error(data.error || 'Invalid free agent response');
+      }
+
+      target.innerHTML = '';
+      const order = ['OVERALL', 'POINT GUARD', 'SHOOTING GUARD', 'SMALL FORWARD', 'POWER FORWARD', 'CENTER'];
+
+      order.forEach((group) => {
+        const players = data.top_free_agents?.[group] ?? [];
+        const column = document.createElement('div');
+        column.className = 'free-agents-column';
+
+        const title = document.createElement('h4');
+        title.textContent = group;
+        column.appendChild(title);
+
+        const list = document.createElement('ul');
+        if (Array.isArray(players) && players.length) {
+          players.forEach((player) => {
+            const item = document.createElement('li');
+            item.textContent = player;
+            list.appendChild(item);
+          });
+        } else {
+          const item = document.createElement('li');
+          item.textContent = 'None available';
+          list.appendChild(item);
+        }
+
+        column.appendChild(list);
+        target.appendChild(column);
+      });
+    } catch (error) {
+      console.error('Error fetching free agents:', error);
+      this.renderFreeAgentsMessage('Unable to load free agents.');
+    }
   }
 
 }

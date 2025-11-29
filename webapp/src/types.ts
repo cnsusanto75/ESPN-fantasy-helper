@@ -45,4 +45,6 @@ export interface UIElements {
   savesContainer: HTMLDivElement | null;
   themeToggle: HTMLButtonElement | null;
   collapseButton: HTMLButtonElement | null;
+  teamRoster: HTMLDivElement | null;
+  topFreeAgents: HTMLDivElement | null;
 }

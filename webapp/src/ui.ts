@@ -104,7 +104,11 @@ export class UIManager {
       themeToggle: document.getElementById('themeToggle') as HTMLButtonElement,
       collapseButton: document.getElementById('collapseButton') as HTMLButtonElement,
       teamRoster: document.getElementById('teamRoster') as HTMLDivElement,
-      topFreeAgents: document.getElementById('topFreeAgents') as HTMLDivElement
+      topFreeAgents: document.getElementById('topFreeAgents') as HTMLDivElement,
+      playerCard: document.getElementById('playerCard') as HTMLDivElement,
+      playerCardName: document.getElementById('playerCardName') as HTMLHeadingElement,
+      playerCardStats: document.getElementById('playerCardStats') as HTMLDivElement,
+      closePlayerCard: document.getElementById('closePlayerCard') as HTMLButtonElement
     };
   }
 
@@ -148,6 +152,10 @@ export class UIManager {
     
     if (saveTitle) {
       saveTitle.addEventListener('change', () => this.handleSaveChanges());
+    }
+    
+    if (this.elements.closePlayerCard) {
+      this.elements.closePlayerCard.addEventListener('click', () => this.hidePlayerCard());
     }
   }
 
@@ -274,7 +282,7 @@ export class UIManager {
     }
     
     let activeSaveSet = false;
-
+    
     try {
       // Notify backend of active save
       const response = await fetch(`${this.API_URL}/set-active-save`, {
@@ -553,6 +561,7 @@ export class UIManager {
       this.elements.teamRoster.textContent = 'Select a save to load your roster.';
     }
     this.renderFreeAgentsMessage('Select a save to load the best available players.');
+    this.hidePlayerCard();
   }
 
   private async refreshLeagueData(): Promise<void> {
@@ -604,7 +613,15 @@ export class UIManager {
       const list = document.createElement('ul');
       data.roster.forEach(player => {
         const item = document.createElement('li');
-        item.textContent = player;
+        const link = document.createElement('a');
+        link.textContent = player;
+        link.href = '#';
+        link.className = 'player-link';
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.showPlayerCard(player);
+        });
+        item.appendChild(link);
         list.appendChild(item);
       });
 
@@ -646,7 +663,15 @@ export class UIManager {
         if (Array.isArray(players) && players.length) {
           players.forEach((player) => {
             const item = document.createElement('li');
-            item.textContent = player;
+            const link = document.createElement('a');
+            link.textContent = player;
+            link.href = '#';
+            link.className = 'player-link';
+            link.addEventListener('click', (e) => {
+              e.preventDefault();
+              this.showPlayerCard(player);
+            });
+            item.appendChild(link);
             list.appendChild(item);
           });
         } else {
@@ -661,6 +686,69 @@ export class UIManager {
     } catch (error) {
       console.error('Error fetching free agents:', error);
       this.renderFreeAgentsMessage('Unable to load free agents.');
+    }
+  }
+
+  private showPlayerCard(playerName: string): void {
+    const { playerCard, playerCardName, playerCardStats } = this.elements;
+    if (!playerCard || !playerCardName || !playerCardStats) return;
+
+    playerCardName.textContent = playerName;
+    playerCardStats.textContent = 'Loading stats...';
+    playerCard.style.display = 'block';
+    
+    this.loadPlayerStats(playerName);
+  }
+
+  private hidePlayerCard(): void {
+    const { playerCard } = this.elements;
+    if (playerCard) {
+      playerCard.style.display = 'none';
+    }
+  }
+
+  private async loadPlayerStats(playerName: string): Promise<void> {
+    const { playerCardStats } = this.elements;
+    if (!playerCardStats) return;
+
+    try {
+      const response = await fetch(`${this.API_URL}/get-player-stats?name=${encodeURIComponent(playerName)}`);
+      const data: { stats?: Record<string, any>; error?: string } = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = data.error || 'Failed to load player stats';
+        console.error('API Error:', errorMsg);
+        playerCardStats.textContent = errorMsg;
+        return;
+      }
+
+      if (!data.stats) {
+        throw new Error(data.error || 'No stats data returned');
+      }
+
+      // Remove NAME from stats display
+      const stats = { ...data.stats };
+      delete stats['NAME'];
+      delete stats['[NAME]'];
+
+      // Format stats for display
+      playerCardStats.innerHTML = '';
+      const statsList = document.createElement('dl');
+      statsList.className = 'player-stats-list';
+
+      Object.entries(stats).forEach(([key, value]) => {
+        const dt = document.createElement('dt');
+        dt.textContent = key.replace(/[\[\]]/g, '');
+        const dd = document.createElement('dd');
+        dd.textContent = typeof value === 'number' ? value.toFixed(2) : String(value);
+        statsList.appendChild(dt);
+        statsList.appendChild(dd);
+      });
+
+      playerCardStats.appendChild(statsList);
+    } catch (error) {
+      console.error('Error fetching player stats:', error);
+      playerCardStats.textContent = 'Unable to load player stats.';
     }
   }
 

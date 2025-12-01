@@ -47,4 +47,8 @@ export interface UIElements {
   collapseButton: HTMLButtonElement | null;
   teamRoster: HTMLDivElement | null;
   topFreeAgents: HTMLDivElement | null;
+  playerCard: HTMLDivElement | null;
+  playerCardName: HTMLHeadingElement | null;
+  playerCardStats: HTMLDivElement | null;
+  closePlayerCard: HTMLButtonElement | null;
 }

@@ -32,10 +32,23 @@
         </div>
         <textarea id="saveContent" class="save-content" placeholder="Select or create a save..." style="display: none;"></textarea>
         <div class="data-panel">
-            <section class="data-section">
-                <h3>Your Team Roster</h3>
-                <div id="teamRoster" class="roster-table">
-                    Select a save to load your roster.
+            <section class="data-section roster-section">
+                <div class="roster-container">
+                    <div class="roster-column-wrapper">
+                        <h3>Your Team Roster</h3>
+                        <div id="teamRoster" class="roster-table">
+                            Select a save to load your roster.
+                        </div>
+                    </div>
+                    <div id="playerCard" class="player-card" style="display: none;">
+                        <div class="player-card-header">
+                            <h4 id="playerCardName">Player Name</h4>
+                            <button id="closePlayerCard" class="close-btn">×</button>
+                        </div>
+                        <div id="playerCardStats" class="player-card-stats">
+                            Click a player name to view stats
+                        </div>
+                    </div>
                 </div>
             </section>
             <section class="data-section">

@@ -477,6 +477,107 @@ button.delete:hover {
   border: 1px solid var(--border-color);
 }
 
+/* Roster section with player card */
+.roster-section {
+  grid-column: 1 / -1;
+}
+
+.roster-container {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.roster-column-wrapper {
+  min-width: 0;
+}
+
+/* Player card */
+.player-card {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 16px;
+  background: var(--item-bg);
+  color: var(--text-color);
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.player-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.player-card-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background: var(--item-hover-bg);
+}
+
+.player-card-stats {
+  font-size: 0.9rem;
+}
+
+.player-stats-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+}
+
+.player-stats-list dt {
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.player-stats-list dd {
+  margin: 0;
+  color: var(--text-color);
+  text-align: right;
+}
+
+/* Player links */
+.player-link {
+  color: var(--text-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.player-link:hover {
+  color: #007bff;
+  text-decoration: underline;
+}
+
 .free-agents-table {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

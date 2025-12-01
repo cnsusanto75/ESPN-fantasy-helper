@@ -14,7 +14,7 @@ from algorithm.league_info import (
     get_team_roster as fetch_team_roster,
     get_top_free_agents as fetch_top_free_agents
 )
-from algorithm.scraper import update_player_stats
+from algorithm.scraper import update_player_stats, get_player_stats_from_db, get_required_cats
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "http://localhost:3001"]}})
@@ -182,6 +182,57 @@ def get_top_free_agents_route():
         return jsonify({'error': str(err)}), 400
     except Exception as err:
         return jsonify({'error': str(err)}), 500
+
+@app.route('/get-player-stats', methods=['GET'])
+def get_player_stats_route():
+    try:
+        player_name = request.args.get('name')
+        if not player_name:
+            return jsonify({'error': 'Player name is required'}), 400
+        
+        stats = get_player_stats_from_db(player_name)
+        if stats is None:
+            # Try to get some sample names for debugging
+            try:
+                from algorithm.scraper import espn_db_path
+                import sqlite3
+                import os
+                if os.path.exists(espn_db_path):
+                    db = sqlite3.connect(espn_db_path)
+                    cursor = db.cursor()
+                    cursor.execute("PRAGMA table_info(player_stats)")
+                    columns = [row[1] for row in cursor.fetchall()]
+                    name_col = None
+                    for col in columns:
+                        if col.replace('[', '').replace(']', '').upper() == 'NAME':
+                            name_col = col
+                            break
+                    if name_col:
+                        cursor.execute(f'SELECT "{name_col}" FROM player_stats LIMIT 5')
+                        samples = [row[0] for row in cursor.fetchall()]
+                        db.close()
+                        return jsonify({
+                            'error': f'Player "{player_name}" not found in database. Sample names: {samples}'
+                        }), 404
+            except:
+                pass
+            return jsonify({'error': f'Player "{player_name}" not found in database. Make sure the database has been populated with player stats.'}), 404
+        else:
+            required_cats = get_required_cats(fetch_league(
+                active_save.league_id,
+                active_save.year,
+                active_save.s2,
+                active_save.swid
+            ))
+            required_stats = {}
+            for cat in stats:
+                if cat in required_cats.values() or cat == 'NAME' or cat == '[NAME]':
+                    required_stats[cat] = stats[cat]
+        return jsonify({'stats': required_stats})
+    except Exception as err:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Server error: {str(err)}'}), 500
 
 if __name__ == '__main__':
     app.run(port=5000)

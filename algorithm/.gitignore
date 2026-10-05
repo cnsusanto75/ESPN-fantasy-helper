@@ -1,2 +1,7 @@
 __pycache__
 league_info.json
+player_data/*.db
+player_data/*.db-*
+player_data/html_cache/
+__pycache__/
+*.pyc

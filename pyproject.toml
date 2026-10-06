@@ -18,6 +18,7 @@ dependencies = [
     "flask-cors>=4.0.0",
     "ollama>=0.1.0",
     "fastapi>=0.104.0",
+    "pypdf>=4.0,<6.0",
 ]
 
 [project.optional-dependencies]

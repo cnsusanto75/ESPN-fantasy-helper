@@ -19,6 +19,7 @@ dependencies = [
     "ollama>=0.1.0",
     "fastapi>=0.104.0",
     "pypdf>=4.0,<6.0",
+    "pdfplumber>=0.11,<0.12",
 ]
 
 [project.optional-dependencies]

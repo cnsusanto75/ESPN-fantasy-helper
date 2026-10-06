@@ -3,5 +3,6 @@ league_info.json
 player_data/*.db
 player_data/*.db-*
 player_data/html_cache/
+player_data/injuries_*.json
 __pycache__/
 *.pyc
